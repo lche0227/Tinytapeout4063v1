@@ -91,7 +91,7 @@ module tt_um_lche0227_aes_pipeline_top (
     aes_pipeline_top u_aes (
         .clk        (clk),
         .rst_n      (rst_n),
-        .valid_in   (start),
+        .valid_in   (start_in),
         .plaintext  (plain_in),
         .key_in     (key_in),
         .ciphertext (cipher_out),
