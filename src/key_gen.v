@@ -25,7 +25,7 @@
 //                              bits[127:0]     = RoundKey[10]
 // =============================================================================
 
-`timescale 1ns / 1ps
+// `timescale 1ns / 1ps
 `default_nettype none
 module key_gen (
     input  wire [127:0]  key_in,

@@ -16,7 +16,7 @@
 //   data_out [127:0]  – 128-bit output state after MixColumns
 // =============================================================================
 
-`timescale 1ns / 1ps
+// `timescale 1ns / 1ps
 `default_nettype none
 module mix_col (
     input  wire [127:0] data_in,

@@ -14,7 +14,7 @@
 //	2. Compared to iterative one-round-per-cycle, throughput massively improved (1 ciphertext per clock instead of 1 every 12 clocks)
 // =============================================================================
 
-`timescale 1ns / 1ps
+// `timescale 1ns / 1ps
 `default_nettype none
 module aes_pipeline_top (
     input  wire         clk,
