@@ -2,6 +2,8 @@
  * Copyright (c) 2024 lche0227
  * SPDX-License-Identifier: Apache-2.0
  */
+
+//`timescale 1ns/1ps //not included in tinytapeout !!
 `default_nettype none
 
 module tt_um_lche0227_aes_pipeline_top (

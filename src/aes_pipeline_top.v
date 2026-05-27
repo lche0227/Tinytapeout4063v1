@@ -1,18 +1,14 @@
 // =============================================================================
 // aes_pipeline_top.v
-// 3-stage pipelined AES-128 encryption core
+// Iterative AES-128 encryption core
 //
 // Architecture:
-//   - 10 AES rounds folded into 3 pipeline stages
-//   - Stage A: Initial AddRoundKey + Rounds 1-3   (4 round-key ops)
-//   - Stage B: Rounds 4-7                          (4 round-key ops)
-//   - Stage C: Rounds 8-9 + Final Round 10         (3 round-key ops)
+//   - One shared AES round datapath reused for all 10 rounds
+//   - One shared 4-S-box key step reused for the round-key schedule
+//   - Latency: 10 cycles from start to done
+//   - Area: minimal for Tiny Tapeout absolute sizing
 //
-//   - Total latency : 3 cycles after pipeline fill
-//   - Throughput    : 1 ciphertext per clock (once filled)
-//   - Area          : ~3x vs iterative, vs ~10x for fully unrolled
-//
-// Interface unchanged from 10-stage version.
+// Interface unchanged from the byte-serial wrapper.
 // =============================================================================
 
 `default_nettype none
@@ -29,126 +25,138 @@ module aes_pipeline_top (
     output wire [127:0] cipher_out
 );
 
-    // =========================================================================
-    // Key Expansion  (combinational, all 11 round keys at once)
-    // =========================================================================
+    // -------------------------------------------------------------------------
+    // Iterative AES core state
+    // -------------------------------------------------------------------------
 
-    wire [1407:0] all_round_keys;
-    wire [127:0]  round_key [0:10];
+    reg [127:0] state_reg;
+    reg [127:0] key_reg;
+    reg [3:0]   round_ctr;
+    reg         busy;
+    reg         done_reg;
+    reg [127:0] cipher_reg;
 
-    key_gen u_key_gen (
-        .key_in        (key_in),
-        .round_key_out (all_round_keys)
+    wire [127:0] next_key;
+    wire [127:0] next_state;
+    wire         final_round = (round_ctr == 4'd10);
+
+    aes_key_schedule_step u_key_step (
+        .key_in    (key_reg),
+        .round_num (round_ctr),
+        .key_out   (next_key)
     );
 
-    genvar rk;
-    generate
-        for (rk = 0; rk <= 10; rk = rk + 1) begin : RK_UNPACK
-            assign round_key[rk] = all_round_keys[(10-rk)*128 +: 128];
-        end
-    endgenerate
-
-    // =========================================================================
-    // Stage A combinational path
-    //   AddRoundKey(RK0) → Round1 → Round2 → Round3
-    // =========================================================================
-
-    wire [127:0] ark0_out;          // after initial AddRoundKey
-    wire [127:0] rA1_out;           // after Round 1
-    wire [127:0] rA2_out;           // after Round 2
-    wire [127:0] rA3_out;           // after Round 3
-
-    assign ark0_out = plain_in ^ round_key[0];
-
-    aes_round uA1 (.state_in(ark0_out), .round_key(round_key[1]),  .state_out(rA1_out));
-    aes_round uA2 (.state_in(rA1_out),  .round_key(round_key[2]),  .state_out(rA2_out));
-    aes_round uA3 (.state_in(rA2_out),  .round_key(round_key[3]),  .state_out(rA3_out));
-
-    // --- Pipeline register A → B ---
-    reg [127:0] stageA;
-
-    always @(posedge clk) begin
-        if (!rst_n) stageA <= 128'b0;
-        else        stageA <= rA3_out;
-    end
-
-    // =========================================================================
-    // Stage B combinational path
-    //   Round4 → Round5 → Round6 → Round7
-    // =========================================================================
-
-    wire [127:0] rB4_out;
-    wire [127:0] rB5_out;
-    wire [127:0] rB6_out;
-    wire [127:0] rB7_out;
-
-    aes_round uB4 (.state_in(stageA),   .round_key(round_key[4]),  .state_out(rB4_out));
-    aes_round uB5 (.state_in(rB4_out),  .round_key(round_key[5]),  .state_out(rB5_out));
-    aes_round uB6 (.state_in(rB5_out),  .round_key(round_key[6]),  .state_out(rB6_out));
-    aes_round uB7 (.state_in(rB6_out),  .round_key(round_key[7]),  .state_out(rB7_out));
-
-    // --- Pipeline register B → C ---
-    reg [127:0] stageB;
-
-    always @(posedge clk) begin
-        if (!rst_n) stageB <= 128'b0;
-        else        stageB <= rB7_out;
-    end
-
-    // =========================================================================
-    // Stage C combinational path
-    //   Round8 → Round9 → FinalRound10
-    // =========================================================================
-
-    wire [127:0] rC8_out;
-    wire [127:0] rC9_out;
-    wire [127:0] rC10_out;
-
-    aes_round       uC8  (.state_in(stageB),   .round_key(round_key[8]),  .state_out(rC8_out));
-    aes_round       uC9  (.state_in(rC8_out),  .round_key(round_key[9]),  .state_out(rC9_out));
-    aes_final_round uC10 (.state_in(rC9_out),  .round_key(round_key[10]), .state_out(rC10_out));
-
-    // --- Output register ---
-    reg [127:0] stageC;
-
-    always @(posedge clk) begin
-        if (!rst_n) stageC <= 128'b0;
-        else        stageC <= rC10_out;
-    end
-
-    // =========================================================================
-    // Valid / Done pipeline  (3 flops, one per stage)
-    // =========================================================================
-
-    reg [2:0] valid_pipe;
+    aes_iter_round u_round (
+        .state_in    (state_reg),
+        .round_key   (next_key),
+        .final_round (final_round),
+        .state_out   (next_state)
+    );
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            valid_pipe <= 3'b0;
+            state_reg  <= 128'b0;
+            key_reg    <= 128'b0;
+            round_ctr  <= 4'b0;
+            busy       <= 1'b0;
+            done_reg   <= 1'b0;
+            cipher_reg <= 128'b0;
         end else begin
-            valid_pipe[0] <= start;
-            valid_pipe[1] <= valid_pipe[0];
-            valid_pipe[2] <= valid_pipe[1];
+            done_reg <= 1'b0;
+
+            if (start) begin
+                state_reg  <= plain_in ^ key_in;
+                key_reg    <= key_in;
+                round_ctr  <= 4'd1;
+                busy       <= 1'b1;
+                cipher_reg <= plain_in ^ key_in;
+            end else if (busy) begin
+                state_reg  <= next_state;
+                key_reg    <= next_key;
+                cipher_reg <= next_state;
+
+                if (round_ctr == 4'd10) begin
+                    busy     <= 1'b0;
+                    done_reg <= 1'b1;
+                end else begin
+                    round_ctr <= round_ctr + 4'd1;
+                end
+            end
         end
     end
 
-    // =========================================================================
-    // Outputs
-    // =========================================================================
-
-    assign done       = valid_pipe[2];
-    assign cipher_out = stageC;
+    assign done       = done_reg;
+    assign cipher_out = cipher_reg;
 
 endmodule
 
 
 // =============================================================================
-// AES MAIN ROUND  (SubBytes → ShiftRows → MixColumns → AddRoundKey)
+// AES KEY SCHEDULE STEP  (W[0..3] -> W[4..7])
 // =============================================================================
 
-module aes_round (
+module aes_key_schedule_step (
+    input  wire [127:0] key_in,
+    input  wire [3:0]   round_num,
+    output wire [127:0] key_out
+);
+
+    function automatic [31:0] rcon;
+        input [3:0] rnd;
+        begin
+            case (rnd)
+                4'd1:  rcon = 32'h01000000;
+                4'd2:  rcon = 32'h02000000;
+                4'd3:  rcon = 32'h04000000;
+                4'd4:  rcon = 32'h08000000;
+                4'd5:  rcon = 32'h10000000;
+                4'd6:  rcon = 32'h20000000;
+                4'd7:  rcon = 32'h40000000;
+                4'd8:  rcon = 32'h80000000;
+                4'd9:  rcon = 32'h1b000000;
+                4'd10: rcon = 32'h36000000;
+                default: rcon = 32'h00000000;
+            endcase
+        end
+    endfunction
+
+    wire [31:0] w0 = key_in[127:96];
+    wire [31:0] w1 = key_in[95:64];
+    wire [31:0] w2 = key_in[63:32];
+    wire [31:0] w3 = key_in[31:0];
+
+    wire [31:0] rot_w = {w3[23:0], w3[31:24]};
+    wire [31:0] sub_w;
+    wire [31:0] temp_w;
+    wire [31:0] w4;
+    wire [31:0] w5;
+    wire [31:0] w6;
+    wire [31:0] w7;
+
+    sbox u_sb0 (.in_byte(rot_w[31:24]), .out_byte(sub_w[31:24]));
+    sbox u_sb1 (.in_byte(rot_w[23:16]), .out_byte(sub_w[23:16]));
+    sbox u_sb2 (.in_byte(rot_w[15:8]),  .out_byte(sub_w[15:8]));
+    sbox u_sb3 (.in_byte(rot_w[7:0]),   .out_byte(sub_w[7:0]));
+
+    assign temp_w = sub_w ^ rcon(round_num);
+    assign w4 = w0 ^ temp_w;
+    assign w5 = w1 ^ w4;
+    assign w6 = w2 ^ w5;
+    assign w7 = w3 ^ w6;
+
+    assign key_out = {w4, w5, w6, w7};
+
+endmodule
+
+
+// =============================================================================
+// AES ITERATIVE ROUND  (SubBytes -> ShiftRows -> MixColumns -> AddRoundKey)
+// =============================================================================
+
+module aes_iter_round (
     input  wire [127:0] state_in,
     input  wire [127:0] round_key,
+    input  wire         final_round,
     output wire [127:0] state_out
 );
 
@@ -157,30 +165,9 @@ module aes_round (
     wire [127:0] mc_out;
 
     sub_byte u_sb (.data_in(state_in), .data_out(sb_out));
-    shift_row u_sr (.data_in(sb_out),  .data_out(sr_out));
-    mix_col   u_mc (.data_in(sr_out),  .data_out(mc_out));
+    shift_row u_sr (.data_in(sb_out), .data_out(sr_out));
+    mix_col   u_mc (.data_in(sr_out), .data_out(mc_out));
 
-    assign state_out = mc_out ^ round_key;
-
-endmodule
-
-
-// =============================================================================
-// AES FINAL ROUND  (SubBytes → ShiftRows → AddRoundKey, no MixColumns)
-// =============================================================================
-
-module aes_final_round (
-    input  wire [127:0] state_in,
-    input  wire [127:0] round_key,
-    output wire [127:0] state_out
-);
-
-    wire [127:0] sb_out;
-    wire [127:0] sr_out;
-
-    sub_byte  u_sb (.data_in(state_in), .data_out(sb_out));
-    shift_row u_sr (.data_in(sb_out),   .data_out(sr_out));
-
-    assign state_out = sr_out ^ round_key;
+    assign state_out = final_round ? (sr_out ^ round_key) : (mc_out ^ round_key);
 
 endmodule
