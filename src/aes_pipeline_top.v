@@ -28,16 +28,16 @@ module aes_pipeline_top (
     output reg          valid_out
 );
 
-    // -------------------------------------------------------------------------
-    // Key Expansion
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Round keys
+    // ---------------------------------------------------------------------
 
     wire [1407:0] all_round_keys;
     wire [127:0] round_key [0:10];
 
     key_gen u_key_gen (
-        .key_in        (key_in),
-        .round_key_out (all_round_keys)
+        .key_in(key_in),
+        .round_key_out(all_round_keys)
     );
 
     genvar rk;
@@ -49,98 +49,100 @@ module aes_pipeline_top (
         end
     endgenerate
 
-    // -------------------------------------------------------------------------
-    // Initial AddRoundKey
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Internal state
+    // ---------------------------------------------------------------------
 
-    wire [127:0] round0_state;
+    reg [127:0] state_reg;
+    reg [2:0]   phase;
+    reg         busy;
 
-    assign round0_state = plaintext ^ round_key[0];
+    // ---------------------------------------------------------------------
+    // Round outputs
+    // ---------------------------------------------------------------------
 
-    // -------------------------------------------------------------------------
-    // Fully combinational rounds
-    // -------------------------------------------------------------------------
+    wire [127:0] round1_out;
+    wire [127:0] round2_out;
+    wire [127:0] final_out;
 
-    wire [127:0] round_state [1:9];
+    // ---------------------------------------------------------------------
+    // Two reused AES rounds
+    // ---------------------------------------------------------------------
 
     aes_round r1 (
-        .state_in  (round0_state),
-        .round_key (round_key[1]),
-        .state_out (round_state[1])
+        .state_in  (state_reg),
+        .round_key (round_key[(phase*2)+1]),
+        .state_out (round1_out)
     );
 
     aes_round r2 (
-        .state_in  (round_state[1]),
-        .round_key (round_key[2]),
-        .state_out (round_state[2])
+        .state_in  (round1_out),
+        .round_key (round_key[(phase*2)+2]),
+        .state_out (round2_out)
     );
 
-    aes_round r3 (
-        .state_in  (round_state[2]),
-        .round_key (round_key[3]),
-        .state_out (round_state[3])
-    );
+    // ---------------------------------------------------------------------
+    // Final round
+    // ---------------------------------------------------------------------
 
-    aes_round r4 (
-        .state_in  (round_state[3]),
-        .round_key (round_key[4]),
-        .state_out (round_state[4])
-    );
-
-    aes_round r5 (
-        .state_in  (round_state[4]),
-        .round_key (round_key[5]),
-        .state_out (round_state[5])
-    );
-
-    aes_round r6 (
-        .state_in  (round_state[5]),
-        .round_key (round_key[6]),
-        .state_out (round_state[6])
-    );
-
-    aes_round r7 (
-        .state_in  (round_state[6]),
-        .round_key (round_key[7]),
-        .state_out (round_state[7])
-    );
-
-    aes_round r8 (
-        .state_in  (round_state[7]),
-        .round_key (round_key[8]),
-        .state_out (round_state[8])
-    );
-
-    aes_round r9 (
-        .state_in  (round_state[8]),
-        .round_key (round_key[9]),
-        .state_out (round_state[9])
-    );
-
-    // -------------------------------------------------------------------------
-    // Final Round
-    // -------------------------------------------------------------------------
-
-    wire [127:0] final_state;
-
-    aes_final_round r10 (
-        .state_in  (round_state[9]),
+    aes_final_round rf (
+        .state_in  (state_reg),
         .round_key (round_key[10]),
-        .state_out (final_state)
+        .state_out (final_out)
     );
 
-    // -------------------------------------------------------------------------
-    // ONLY output register retained
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Main controller
+    // ---------------------------------------------------------------------
 
     always @(posedge clk or negedge rst_n) begin
+
         if (!rst_n) begin
+
+            state_reg  <= 128'd0;
             ciphertext <= 128'd0;
             valid_out  <= 1'b0;
+            phase      <= 3'd0;
+            busy       <= 1'b0;
+
         end
         else begin
-            ciphertext <= final_state;
-            valid_out  <= valid_in;
+
+            valid_out <= 1'b0;
+
+            // -------------------------------------------------------------
+            // Start encryption
+            // -------------------------------------------------------------
+
+            if (valid_in && !busy) begin
+
+                state_reg <= plaintext ^ round_key[0];
+                phase     <= 3'd0;
+                busy      <= 1'b1;
+
+            end
+
+            // -------------------------------------------------------------
+            // Perform 2 rounds per cycle
+            // -------------------------------------------------------------
+
+            else if (busy) begin
+
+                if (phase < 4) begin
+
+                    state_reg <= round2_out;
+                    phase     <= phase + 1'b1;
+
+                end
+                else begin
+
+                    // Final round after rounds 1..9 complete
+                    ciphertext <= final_out;
+                    valid_out  <= 1'b1;
+                    busy       <= 1'b0;
+
+                end
+            end
         end
     end
 
