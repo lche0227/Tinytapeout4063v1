@@ -31,14 +31,18 @@
 // key_gen.v  –  AES-128 Key Expansion (KeySchedule, sequential/clocked version)
 // =============================================================================
 
+// =============================================================================
+// key_gen.v  –  AES-128 Key Expansion (KeySchedule) – Sequential/Clocked Version
+// =============================================================================
+
 `default_nettype none
 module key_gen (
     input  wire        clk,
     input  wire        rst_n,
     input  wire        load_key,           // pulse high to (re)load key_in
     input  wire [127:0] key_in,
-    output reg  [1407:0] round_key_out     // 11 × 128 bits
-    output reg           keys_ready      // high for one cycle when done
+    output reg  [1407:0] round_key_out,     // 11 × 128 bits
+    output reg           keys_ready        // high for one cycle when done
 );
 
     // -------------------------------------------------------------------------
@@ -47,7 +51,7 @@ module key_gen (
     reg [31:0] W [0:43];
     integer i;
 
-    // Rcon function (as before)
+    // Rcon function
     function [31:0] rcon;
         input integer rnd;
         begin
@@ -75,41 +79,6 @@ module key_gen (
         end
     endfunction
 
-    integer i;
-
-    // Sequential logic for key expansion: no combinational loops, safe for FPGA/ASIC
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            for (i = 0; i < 44; i = i + 1) W[i] <= 32'd0;
-            round_key_out <= 1408'd0;
-            keys_ready    <= 1'b0;       // reset
-            //round_key_out <= 0;
-        end else if (load_key) begin
-            // Seed first four words from key_in
-            W[0] <= key_in[127:96];
-            W[1] <= key_in[95:64];
-            W[2] <= key_in[63:32];
-            W[3] <= key_in[31:0];
-
-            // Key expansion loop -- must schedule S-box (subword) calls
-            for (i = 4; i < 44; i = i + 1) begin
-                if (i % 4 == 0) begin
-                    W[i] <= W[i-4] ^ sub_word(rot_word(W[i-1])) ^ rcon(i/4);
-                end else begin
-                    W[i] <= W[i-4] ^ W[i-1];
-                end
-            end
-
-            // Pack round keys into output
-            for (i = 0; i <= 10; i = i + 1) begin
-                round_key_out[(10-i)*128 +: 128] <= { W[4*i], W[4*i+1], W[4*i+2], W[4*i+3] };    
-            end
-            keys_ready <= 1'b1; // signal that round keys are ready
-        end else begin
-            keys_ready <= 1'b0; // clear ready signal until next load
-        end
-    end
-
     // Combinational SubWord (S-box) expansion for a 32-bit word
     function [31:0] sub_word;
         input [31:0] w;
@@ -129,5 +98,38 @@ module key_gen (
             sbox = b; // <- Replace with your actual S-box logic
         end
     endfunction
+
+    // Sequential logic for key expansion
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            for (i = 0; i < 44; i = i + 1) W[i] <= 32'd0;
+            round_key_out <= 1408'd0;
+            keys_ready    <= 1'b0;
+        end else if (load_key) begin
+            // Seed first four words from key_in
+            W[0] <= key_in[127:96];
+            W[1] <= key_in[95:64];
+            W[2] <= key_in[63:32];
+            W[3] <= key_in[31:0];
+
+            // Key expansion loop
+            for (i = 4; i < 44; i = i + 1) begin
+                if (i % 4 == 0) begin
+                    W[i] <= W[i-4] ^ sub_word(rot_word(W[i-1])) ^ rcon(i/4);
+                end else begin
+                    W[i] <= W[i-4] ^ W[i-1];
+                end
+            end
+
+            // Pack round keys into output
+            for (i = 0; i <= 10; i = i + 1) begin
+                round_key_out[(10-i)*128 +: 128] <= { W[4*i], W[4*i+1], W[4*i+2], W[4*i+3] };    
+            end
+            
+            keys_ready <= 1'b1; // signal that round keys are ready
+        end else begin
+            keys_ready <= 1'b0; // clear ready signal until next load
+        end
+    end
 
 endmodule
