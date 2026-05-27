@@ -13,6 +13,7 @@ PROJECT_SOURCES = tt_um_lche0227_aes_pipeline_top.v \
                   key_gen.v \
                   sub_byte.v \
                   shift_row.v \
+				  sbox.v \
                   mix_col.v
 
 ifneq ($(GATES),yes)

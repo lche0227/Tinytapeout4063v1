@@ -19,7 +19,8 @@
 //   data_in  [127:0]  – 128-bit input state
 //   data_out [127:0]  – 128-bit output state after row shifting
 // =============================================================================
-
+`timescale 1ns / 1ps
+`default_nettype none
 module shift_row (
     input  wire [127:0] data_in,
     output wire [127:0] data_out

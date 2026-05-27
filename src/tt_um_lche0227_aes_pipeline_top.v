@@ -2,8 +2,10 @@
  * Copyright (c) 2024 lche0227
  * SPDX-License-Identifier: Apache-2.0
  */
-`default_nettype none
 
+`timescale 1ns / 1ps
+
+`default_nettype none
 module tt_um_lche0227_aes_pipeline_top (
     input  wire [7:0] ui_in,
     output wire [7:0] uo_out,

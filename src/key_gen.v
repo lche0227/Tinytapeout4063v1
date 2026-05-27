@@ -25,8 +25,8 @@
 //                              bits[127:0]     = RoundKey[10]
 // =============================================================================
 
-
-
+`timescale 1ns / 1ps
+`default_nettype none
 module key_gen (
     input  wire [127:0]  key_in,
     output wire [1407:0] round_key_out   // 11 × 128 bits
@@ -93,17 +93,27 @@ module key_gen (
 		 // -------------------------------------------------------------------------
 		 // Key schedule: generate W[4] through W[43]
 		 // -------------------------------------------------------------------------
-		 genvar i;
-		 generate
-			  for (i = 4; i < 44; i = i + 1) begin : KEY_SCHED
-					if (i % 4 == 0) begin
-						 // sub_w array index = (i/4) - 1  maps i=4->0, i=8->1, ... i=40->9
-						 assign W[i] = W[i-4] ^ sub_w[(i/4) - 1] ^ rcon(i/4);
-					end else begin
-						 assign W[i] = W[i-4] ^ W[i-1];
-					end
-			  end
-		 endgenerate
+		//  genvar i;
+		//  generate
+		// 	  for (i = 4; i < 44; i = i + 1) begin : KEY_SCHED
+		// 			if (i % 4 == 0) begin
+		// 				 // sub_w array index = (i/4) - 1  maps i=4->0, i=8->1, ... i=40->9
+		// 				 assign W[i] = W[i-4] ^ sub_w[(i/4) - 1] ^ rcon(i/4);
+		// 			end else begin
+		// 				 assign W[i] = W[i-4] ^ W[i-1];
+		// 			end
+		// 	  end
+		//  endgenerate
+        genvar i;
+        generate
+            for (i = 4; i < 44; i = i + 1) begin : KEY_SCHED
+                if (i % 4 == 0) begin : ks_if
+                    assign W[i] = W[i-4] ^ sub_w[(i/4) - 1] ^ rcon(i/4);
+                end else begin : ks_else
+                    assign W[i] = W[i-4] ^ W[i-1];
+                end
+            end
+        endgenerate
 	 
 
     // -------------------------------------------------------------------------
