@@ -79,6 +79,15 @@ module key_gen (
         end
     endfunction
 
+    // Sbox lookup table interface (replace this stub as needed)
+    function [7:0] sbox;
+        input [7:0] b;
+        begin
+            // You should connect this to your S-box implementation
+            sbox = b; // <- Replace with your actual S-box logic
+        end
+    endfunction
+    
     // Combinational SubWord (S-box) expansion for a 32-bit word
     function [31:0] sub_word;
         input [31:0] w;
@@ -90,17 +99,10 @@ module key_gen (
         end
     endfunction
 
-    // Sbox lookup table interface (replace this stub as needed)
-    function [7:0] sbox;
-        input [7:0] b;
-        begin
-            // You should connect this to your S-box implementation
-            sbox = b; // <- Replace with your actual S-box logic
-        end
-    endfunction
+
 
     // Sequential logic for key expansion
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge clk) begin
         if (!rst_n) begin
             for (i = 0; i < 44; i = i + 1) W[i] <= 32'd0;
             round_key_out <= 1408'd0;

@@ -97,57 +97,34 @@ module tt_um_lche0227_aes_pipeline_top (
             load_key_r <= (we && !byte_index[4] && (byte_index[3:0] == 4'd15));
     end
 
-    // =========================================================================
-    // Key generation (clocked)
-    // =========================================================================
-
-    wire [1407:0] all_round_keys;
-    wire           keys_ready;
-
-    key_gen u_key_gen (
-        .clk           (clk),
-        .rst_n         (rst_n),
-        .load_key      (load_key_r),
-        .key_in        (key_in),
-        .round_key_out (all_round_keys),
-        .keys_ready    (keys_ready)       // one-cycle pulse when expansion done
-    );
-
-    wire [127:0] round_key [0:10];
-    genvar rk;
-    generate
-        for (rk = 0; rk <= 10; rk = rk + 1) begin : RK_UNPACK
-            assign round_key[rk] = all_round_keys[(10-rk)*128 +: 128];
-        end
-    endgenerate
 
     // =========================================================================
-    // AES pipeline core
+    // AES pipeline core — now includes key_gen internally
     // =========================================================================
-    
+
     wire        done;
+    wire        keys_ready;
     wire [127:0] cipher_out;
 
     aes_pipeline_top u_aes (
         .clk        (clk),
         .rst_n      (rst_n),
         .start      (start_in),
+        .load_key   (load_key_r),       // ← NEW
         .key_in     (key_in),
         .plain_in   (plain_in),
         .done       (done),
+        .keys_ready (keys_ready),       // ← NEW
         .cipher_out (cipher_out)
     );
 
     // =========================================================================
-    // Output byte mux — explicit 16:1 mux on cipher_out bytes
-    // Avoids variable part-select in always @(*) which some tools warn about
+    // Output byte mux
     // =========================================================================
 
     wire [3:0] out_sel = byte_index[3:0];
 
-    wire [7:0] cipher_mux_out;
-
-    assign cipher_mux_out =
+    wire [7:0] cipher_mux_out =
         (out_sel == 4'd0)  ? cipher_out[127:120] :
         (out_sel == 4'd1)  ? cipher_out[119:112] :
         (out_sel == 4'd2)  ? cipher_out[111:104] :
@@ -166,14 +143,13 @@ module tt_um_lche0227_aes_pipeline_top (
                              cipher_out[  7:  0] ;
 
     // =========================================================================
-    // Output assignments
+    // Outputs
     // =========================================================================
 
     assign uo_out  = output_sel ? cipher_mux_out : 8'h00;
-    assign uio_out = {6'b0, keys_ready, done};  // [1]=keys_ready, [0]=done
-    assign uio_oe  = 8'b0000_0001;   // only uio[0] is driven (done)
+    assign uio_out = {6'b0, keys_ready, done};
+    assign uio_oe  = 8'b0000_0011;   // uio[0]=done, uio[1]=keys_ready, outputs
 
-    // Suppress unused input warning
     wire _unused = &{ena, 1'b0};
 
 endmodule
