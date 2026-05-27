@@ -104,16 +104,66 @@ module key_gen (
 		// 			end
 		// 	  end
 		//  endgenerate
-        genvar i;
-        generate
-            for (i = 4; i < 44; i = i + 1) begin : KEY_SCHED
-                if (i % 4 == 0) begin : ks_if
-                    assign W[i] = W[i-4] ^ sub_w[(i/4) - 1] ^ rcon(i/4);
-                end else begin : ks_else
-                    assign W[i] = W[i-4] ^ W[i-1];
-                end
-            end
-        endgenerate
+            // -------------------------------------------------------------------------
+        // Key schedule: generate W[4] through W[43] -- UNROLLED to avoid circular logic
+        // -------------------------------------------------------------------------
+        // Seed from the cipher key
+        assign W[0] = key_in[127:96];
+        assign W[1] = key_in[95:64];
+        assign W[2] = key_in[63:32];
+        assign W[3] = key_in[31:0];
+
+        // Key schedule for W[4] to W[43]
+        assign W[4]  = W[0] ^ sub_w[0] ^ rcon(1);
+        assign W[5]  = W[1] ^ W[4];
+        assign W[6]  = W[2] ^ W[5];
+        assign W[7]  = W[3] ^ W[6];
+
+        assign W[8]  = W[4] ^ sub_w[1] ^ rcon(2);
+        assign W[9]  = W[5] ^ W[8];
+        assign W[10] = W[6] ^ W[9];
+        assign W[11] = W[7] ^ W[10];
+
+        assign W[12] = W[8] ^ sub_w[2] ^ rcon(3);
+        assign W[13] = W[9] ^ W[12];
+        assign W[14] = W[10] ^ W[13];
+        assign W[15] = W[11] ^ W[14];
+
+        assign W[16] = W[12] ^ sub_w[3] ^ rcon(4);
+        assign W[17] = W[13] ^ W[16];
+        assign W[18] = W[14] ^ W[17];
+        assign W[19] = W[15] ^ W[18];
+
+        assign W[20] = W[16] ^ sub_w[4] ^ rcon(5);
+        assign W[21] = W[17] ^ W[20];
+        assign W[22] = W[18] ^ W[21];
+        assign W[23] = W[19] ^ W[22];
+
+        assign W[24] = W[20] ^ sub_w[5] ^ rcon(6);
+        assign W[25] = W[21] ^ W[24];
+        assign W[26] = W[22] ^ W[25];
+        assign W[27] = W[23] ^ W[26];
+
+        assign W[28] = W[24] ^ sub_w[6] ^ rcon(7);
+        assign W[29] = W[25] ^ W[28];
+        assign W[30] = W[26] ^ W[29];
+        assign W[31] = W[27] ^ W[30];
+
+        assign W[32] = W[28] ^ sub_w[7] ^ rcon(8);
+        assign W[33] = W[29] ^ W[32];
+        assign W[34] = W[30] ^ W[33];
+        assign W[35] = W[31] ^ W[34];
+
+        assign W[36] = W[32] ^ sub_w[8] ^ rcon(9);
+        assign W[37] = W[33] ^ W[36];
+        assign W[38] = W[34] ^ W[37];
+        assign W[39] = W[35] ^ W[38];
+
+        assign W[40] = W[36] ^ sub_w[9] ^ rcon(10);
+        assign W[41] = W[37] ^ W[40];
+        assign W[42] = W[38] ^ W[41];
+        assign W[43] = W[39] ^ W[42];
+
 	 
 
     // -------------------------------------------------------------------------
