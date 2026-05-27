@@ -91,11 +91,11 @@ module tt_um_lche0227_aes_pipeline_top (
     aes_pipeline_top u_aes (
         .clk        (clk),
         .rst_n      (rst_n),
-        .start      (start_in),
+        .valid_in   (start),
+        .plaintext  (plain_in),
         .key_in     (key_in),
-        .plain_in   (plain_in),
-        .done       (done),
-        .cipher_out (cipher_out)
+        .ciphertext (cipher_out),
+        .valid_out  (done)
     );
 
     // =========================================================================
