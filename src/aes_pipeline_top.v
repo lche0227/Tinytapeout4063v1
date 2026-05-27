@@ -1,6 +1,6 @@
 // =============================================================================
 // aes_pipeline_top.v
-// Fully pipelined AES-128 encryption core
+// Fully pipelined AES-128 encryption core // not anymore
 //
 // Architecture:
 //   - Fully unrolled
@@ -68,16 +68,24 @@ module aes_pipeline_top (
     // ---------------------------------------------------------------------
     // Two reused AES rounds
     // ---------------------------------------------------------------------
-
+    wire [3:0] rk1_idx;
+    wire [3:0] rk2_idx;
+    
+    assign rk1_idx = (phase == 4) ? 4'd9 :
+                     ((phase << 1) + 1);
+    
+    assign rk2_idx = (phase >= 4) ? 4'd9 :
+                     ((phase << 1) + 2);
+    
     aes_round r1 (
         .state_in  (state_reg),
-        .round_key (round_key[(phase*2)+1]),
+        .round_key (round_key[rk1_idx]),
         .state_out (round1_out)
     );
 
     aes_round r2 (
         .state_in  (round1_out),
-        .round_key (round_key[(phase*2)+2]),
+        .round_key (round_key[rk2_idx]),
         .state_out (round2_out)
     );
 
@@ -86,7 +94,7 @@ module aes_pipeline_top (
     // ---------------------------------------------------------------------
 
     aes_final_round rf (
-        .state_in  (state_reg),
+        .state_in  (round1_out),
         .round_key (round_key[10]),
         .state_out (final_out)
     );
@@ -127,13 +135,34 @@ module aes_pipeline_top (
             // -------------------------------------------------------------
 
             else if (busy) begin
-
+                // ---------------------------------------------------------
+                // Phases 0..3
+                // Perform TWO normal AES rounds
+                // ---------------------------------------------------------
                 if (phase < 4) begin
 
                     state_reg <= round2_out;
                     phase     <= phase + 1'b1;
 
                 end
+
+                // ---------------------------------------------------------
+                // Phase 4
+                // Perform ONLY round 9
+                // ---------------------------------------------------------
+            
+                else if (phase == 4) begin
+            
+                    state_reg <= round1_out;
+                    phase     <= phase + 1'b1;
+            
+                end
+    
+                // ---------------------------------------------------------
+                // Phase 5
+                // Final AES round (round 10)
+                // ---------------------------------------------------------
+
                 else begin
 
                     // Final round after rounds 1..9 complete
