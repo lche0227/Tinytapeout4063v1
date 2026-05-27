@@ -16,6 +16,7 @@
 //   data_out [127:0]  – 128-bit output state after MixColumns
 // =============================================================================
 
+
 module mix_col (
     input  wire [127:0] data_in,
     output wire [127:0] data_out

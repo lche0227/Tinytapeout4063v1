@@ -7,7 +7,6 @@
 //               structure rather than a mux tree.
 // =============================================================================
 `timescale 1ns / 1ps
-
 module sbox (
     input  wire [7:0] in_byte,
     output wire [7:0] out_byte

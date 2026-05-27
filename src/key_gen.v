@@ -25,6 +25,8 @@
 //                              bits[127:0]     = RoundKey[10]
 // =============================================================================
 
+
+
 module key_gen (
     input  wire [127:0]  key_in,
     output wire [1407:0] round_key_out   // 11 × 128 bits
