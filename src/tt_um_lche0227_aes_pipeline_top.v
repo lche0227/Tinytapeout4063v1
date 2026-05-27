@@ -82,11 +82,49 @@ module tt_um_lche0227_aes_pipeline_top (
             assign plain_in[127 - b*8 -: 8] = plain_bytes[b];
         end
     endgenerate
+    // =========================================================================
+    // Auto load_key: pulse one cycle after last key byte (index 15) written
+    // =========================================================================
+
+    reg load_key_r;
+
+    always @(posedge clk) begin
+        if (!rst_n)
+            load_key_r <= 1'b0;
+        else
+            // fires the cycle AFTER byte_index=15 we=1 — key_bytes[15] is
+            // already registered, so key_in is stable for key_gen to sample
+            load_key_r <= (we && !byte_index[4] && (byte_index[3:0] == 4'd15));
+    end
+
+    // =========================================================================
+    // Key generation (clocked)
+    // =========================================================================
+
+    wire [1407:0] all_round_keys;
+    wire           keys_ready;
+
+    key_gen u_key_gen (
+        .clk           (clk),
+        .rst_n         (rst_n),
+        .load_key      (load_key_r),
+        .key_in        (key_in),
+        .round_key_out (all_round_keys),
+        .keys_ready    (keys_ready)       // one-cycle pulse when expansion done
+    );
+
+    wire [127:0] round_key [0:10];
+    genvar rk;
+    generate
+        for (rk = 0; rk <= 10; rk = rk + 1) begin : RK_UNPACK
+            assign round_key[rk] = all_round_keys[(10-rk)*128 +: 128];
+        end
+    endgenerate
 
     // =========================================================================
     // AES pipeline core
     // =========================================================================
-
+    
     wire        done;
     wire [127:0] cipher_out;
 
@@ -132,7 +170,7 @@ module tt_um_lche0227_aes_pipeline_top (
     // =========================================================================
 
     assign uo_out  = output_sel ? cipher_mux_out : 8'h00;
-    assign uio_out = {7'b000_0000, done};
+    assign uio_out = {6'b0, keys_ready, done};  // [1]=keys_ready, [0]=done
     assign uio_oe  = 8'b0000_0001;   // only uio[0] is driven (done)
 
     // Suppress unused input warning

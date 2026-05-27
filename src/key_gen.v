@@ -38,12 +38,14 @@ module key_gen (
     input  wire        load_key,           // pulse high to (re)load key_in
     input  wire [127:0] key_in,
     output reg  [1407:0] round_key_out     // 11 × 128 bits
+    output reg           keys_ready      // high for one cycle when done
 );
 
     // -------------------------------------------------------------------------
     // Internal word array  W[0..43]  (44 words × 32 bits)
     // -------------------------------------------------------------------------
     reg [31:0] W [0:43];
+    integer i;
 
     // Rcon function (as before)
     function [31:0] rcon;
@@ -79,7 +81,9 @@ module key_gen (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             for (i = 0; i < 44; i = i + 1) W[i] <= 32'd0;
-            round_key_out <= 0;
+            round_key_out <= 1408'd0;
+            keys_ready    <= 1'b0;       // reset
+            //round_key_out <= 0;
         end else if (load_key) begin
             // Seed first four words from key_in
             W[0] <= key_in[127:96];
@@ -98,8 +102,11 @@ module key_gen (
 
             // Pack round keys into output
             for (i = 0; i <= 10; i = i + 1) begin
-                round_key_out[(10-i)*128 +: 128] <= { W[4*i], W[4*i+1], W[4*i+2], W[4*i+3] };
+                round_key_out[(10-i)*128 +: 128] <= { W[4*i], W[4*i+1], W[4*i+2], W[4*i+3] };    
             end
+            keys_ready <= 1'b1; // signal that round keys are ready
+        end else begin
+            keys_ready <= 1'b0; // clear ready signal until next load
         end
     end
 
@@ -107,19 +114,19 @@ module key_gen (
     function [31:0] sub_word;
         input [31:0] w;
         begin
-            sub_word[31:24] = sbox_lookup(w[31:24]);
-            sub_word[23:16] = sbox_lookup(w[23:16]);
-            sub_word[15:8]  = sbox_lookup(w[15:8]);
-            sub_word[7:0]   = sbox_lookup(w[7:0]);
+            sub_word[31:24] = sbox(w[31:24]);
+            sub_word[23:16] = sbox(w[23:16]);
+            sub_word[15:8]  = sbox(w[15:8]);
+            sub_word[7:0]   = sbox(w[7:0]);
         end
     endfunction
 
     // Sbox lookup table interface (replace this stub as needed)
-    function [7:0] sbox_lookup;
+    function [7:0] sbox;
         input [7:0] b;
         begin
             // You should connect this to your S-box implementation
-            sbox_lookup = b; // <- Replace with your actual S-box logic
+            sbox = b; // <- Replace with your actual S-box logic
         end
     endfunction
 
