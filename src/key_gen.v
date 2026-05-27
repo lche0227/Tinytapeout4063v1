@@ -37,18 +37,15 @@
 
 module key_gen (
     input  wire [127:0]  key_in,
-    output wire [1407:0] round_key_out   // 11 × 128 bits
+    output wire [1407:0]  round_key_out   // 11 × 128 bits
 );
 
     localparam integer WORDS = 44;
 
-    // -------------------------------------------------------------------------
-    // W_flat holds W[0..43], each 32-bit word packed into one vector.
-    // Word i lives at bits [i*32 +: 32].
-    // Using a flat packed vector avoids Verilator UNOPTFLAT warnings that
-    // occur with unpacked wire arrays in combinational generate loops.
-    // -------------------------------------------------------------------------
-    wire [WORDS*32-1:0] W_flat;
+    // We'll compute into W_next (combinational) and then expose it as W_flat.
+    // This avoids Verilator thinking W_flat is feeding itself through assigns.
+    logic [WORDS*32-1:0] W_next;
+    wire  [WORDS*32-1:0] W_flat = W_next;
 
     // -------------------------------------------------------------------------
     // Rcon table (index 1-based; only the most-significant byte is non-zero)
@@ -81,16 +78,7 @@ module key_gen (
     endfunction
 
     // -------------------------------------------------------------------------
-    // Seed W[0..3] from the cipher key
-    // -------------------------------------------------------------------------
-    assign W_flat[0*32 +: 32] = key_in[127:96];
-    assign W_flat[1*32 +: 32] = key_in[95:64];
-    assign W_flat[2*32 +: 32] = key_in[63:32];
-    assign W_flat[3*32 +: 32] = key_in[31:0];
-
-    // -------------------------------------------------------------------------
     // SubWord(RotWord(W[i-1])) is needed only when i % 4 == 0.
-    // For AES-128, those i values are 4,8,12,...,40 (10 occurrences).
     // Map s=0..9 to i=4*(s+1). Then W[i-1] = W[4*s+3].
     // -------------------------------------------------------------------------
     wire [31:0] rot_w [0:9];
@@ -99,7 +87,6 @@ module key_gen (
     genvar s;
     generate
         for (s = 0; s < 10; s = s + 1) begin : SUBWORD_INST
-            // Direct bit-slice instead of W_get() to avoid function-in-generate issues
             assign rot_w[s] = rot_word(W_flat[(4*s+3)*32 +: 32]);
 
             sbox u_sb0 (.in_byte(rot_w[s][31:24]), .out_byte(sub_w[s][31:24]));
@@ -110,29 +97,38 @@ module key_gen (
     endgenerate
 
     // -------------------------------------------------------------------------
-    // Key schedule: generate W[4] through W[43]
-    // W[i] = W[i-4] XOR SubWord(RotWord(W[i-1])) XOR Rcon[i/4]  (i mod 4 == 0)
-    // W[i] = W[i-4] XOR W[i-1]                                  (otherwise)
-    // All generate if/else blocks are explicitly labelled to avoid GENUNNAMED.
+    // Build W_next in one combinational process.
+    // This avoids "assigning slices of a net using itself" patterns.
     // -------------------------------------------------------------------------
-    genvar i;
-    generate
-        for (i = 4; i < WORDS; i = i + 1) begin : KEY_SCHED
-            if ((i % 4) == 0) begin : gen_round_word
-                // sub_w index = (i/4)-1 maps i=4->0, i=8->1, ... i=40->9
-                assign W_flat[i*32 +: 32] =
-                    W_flat[(i-4)*32 +: 32] ^ sub_w[(i/4) - 1] ^ rcon(i/4);
-            end else begin : gen_nonround_word
-                assign W_flat[i*32 +: 32] =
-                    W_flat[(i-4)*32 +: 32] ^ W_flat[(i-1)*32 +: 32];
+    integer j;
+    always @* begin
+        // Default everything to zero to avoid any inferred latches / X-prop weirdness
+        W_next = '0;
+
+        // Seed W[0..3] from the cipher key
+        W_next[0*32 +: 32] = key_in[127:96];
+        W_next[1*32 +: 32] = key_in[95:64];
+        W_next[2*32 +: 32] = key_in[63:32];
+        W_next[3*32 +: 32] = key_in[31:0];
+
+        // Generate W[4]..W[43]
+        for (j = 4; j < WORDS; j = j + 1) begin
+            if ((j % 4) == 0) begin
+                // sub_w index = (j/4)-1 maps j=4->0, j=8->1, ... j=40->9
+                W_next[j*32 +: 32] =
+                    W_next[(j-4)*32 +: 32] ^
+                    sub_w[(j/4) - 1] ^
+                    rcon(j/4);
+            end else begin
+                W_next[j*32 +: 32] =
+                    W_next[(j-4)*32 +: 32] ^
+                    W_next[(j-1)*32 +: 32];
             end
         end
-    endgenerate
+    end
 
     // -------------------------------------------------------------------------
     // Pack round keys into the output bus
-    // RoundKey[k] = {W[4k], W[4k+1], W[4k+2], W[4k+3]}
-    // RoundKey[0] at MSBs (bits 1407:1280), RoundKey[10] at LSBs (bits 127:0)
     // -------------------------------------------------------------------------
     genvar k;
     generate
