@@ -100,10 +100,10 @@ module key_gen (
     // suppresses only this false-positive; synthesis is unaffected.
     // -------------------------------------------------------------------------
 
-    /* verilator lint_off UNOPTFLAT */
+    // /* verilator lint_off UNOPTFLAT */
     wire [31:0] rot_w [0:9];
     wire [31:0] sub_w [0:9];
-    /* verilator lint_on UNOPTFLAT */
+    // /* verilator lint_on UNOPTFLAT */
 
     genvar s;
     generate
