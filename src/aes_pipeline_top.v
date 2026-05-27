@@ -14,17 +14,17 @@
 //	2. Compared to iterative one-round-per-cycle, throughput massively improved (1 ciphertext per clock instead of 1 every 12 clocks)
 // =============================================================================
 
-// `timescale 1ns / 1ps
 `default_nettype none
+
 module aes_pipeline_top (
     input  wire         clk,
     input  wire         rst_n,
     input  wire         start,
-    input  wire         load_key,       // NEW: pulse to trigger key expansion
+
     input  wire [127:0] key_in,
     input  wire [127:0] plain_in,
+
     output wire         done,
-    output wire         keys_ready,     // NEW: high one cycle after load_key
     output wire [127:0] cipher_out
 );
 
@@ -36,12 +36,8 @@ module aes_pipeline_top (
     wire [127:0] round_key [0:10];
 
     key_gen u_key_gen (
-        .clk           (clk),
-        .rst_n         (rst_n),
-        .load_key      (load_key),
         .key_in        (key_in),
-        .round_key_out (all_round_keys),
-        .keys_ready    (keys_ready)
+        .round_key_out (all_round_keys)
     );
 
     genvar rk;

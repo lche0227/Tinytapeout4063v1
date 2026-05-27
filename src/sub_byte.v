@@ -9,7 +9,6 @@
 //   data_in  [127:0]  – 128-bit input state
 //   data_out [127:0]  – 128-bit output state after byte substitution
 // =============================================================================
-// `timescale 1ns / 1ps
 `default_nettype none
 module sub_byte (
     input  wire [127:0] data_in,

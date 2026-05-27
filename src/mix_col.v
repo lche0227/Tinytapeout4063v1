@@ -16,7 +16,6 @@
 //   data_out [127:0]  – 128-bit output state after MixColumns
 // =============================================================================
 
-// `timescale 1ns / 1ps
 `default_nettype none
 module mix_col (
     input  wire [127:0] data_in,
@@ -53,8 +52,6 @@ endmodule
 // significant byte (row 0).  Implements the MDS matrix multiply defined in
 // FIPS-197 Section 4.2.1.
 // =============================================================================
-
-
 module mixcolumns_one_column (
     input  wire [31:0] col_in,
     output wire [31:0] col_out
