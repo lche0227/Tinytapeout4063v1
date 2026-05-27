@@ -19,18 +19,18 @@
 module aes_pipeline_top (
     input  wire         clk,
     input  wire         rst_n,
-    input  wire         start,
+    input  wire         valid_in,
 
+    input  wire [127:0] plaintext,
     input  wire [127:0] key_in,
-    input  wire [127:0] plain_in,
 
-    output wire         done,
-    output wire [127:0] cipher_out
+    output reg  [127:0] ciphertext,
+    output reg          valid_out
 );
 
-    // =========================================================================
+    // -------------------------------------------------------------------------
     // Key Expansion
-    // =========================================================================
+    // -------------------------------------------------------------------------
 
     wire [1407:0] all_round_keys;
     wire [127:0] round_key [0:10];
@@ -49,189 +49,100 @@ module aes_pipeline_top (
         end
     endgenerate
 
-    // =========================================================================
+    // -------------------------------------------------------------------------
     // Initial AddRoundKey
-    // =========================================================================
+    // -------------------------------------------------------------------------
 
-    wire [127:0] init_state;
+    wire [127:0] round0_state;
 
-    assign init_state = plain_in ^ round_key[0];
+    assign round0_state = plaintext ^ round_key[0];
 
-    // =========================================================================
-    // Pipeline Registers
-    // =========================================================================
+    // -------------------------------------------------------------------------
+    // Fully combinational rounds
+    // -------------------------------------------------------------------------
 
-    reg [127:0] stage0;
-    reg [127:0] stage1;
-    reg [127:0] stage2;
-    reg [127:0] stage3;
-    reg [127:0] stage4;
-    reg [127:0] stage5;
-    reg [127:0] stage6;
-    reg [127:0] stage7;
-    reg [127:0] stage8;
-    reg [127:0] stage9;
-    reg [127:0] stage10;
-
-    // =========================================================================
-    // Round Outputs
-    // =========================================================================
-
-    wire [127:0] round1_out;
-    wire [127:0] round2_out;
-    wire [127:0] round3_out;
-    wire [127:0] round4_out;
-    wire [127:0] round5_out;
-    wire [127:0] round6_out;
-    wire [127:0] round7_out;
-    wire [127:0] round8_out;
-    wire [127:0] round9_out;
-    wire [127:0] round10_out;
-
-    // =========================================================================
-    // AES Rounds 1-9
-    // =========================================================================
+    wire [127:0] round_state [1:9];
 
     aes_round r1 (
-        .state_in  (stage0),
+        .state_in  (round0_state),
         .round_key (round_key[1]),
-        .state_out (round1_out)
+        .state_out (round_state[1])
     );
 
     aes_round r2 (
-        .state_in  (stage1),
+        .state_in  (round_state[1]),
         .round_key (round_key[2]),
-        .state_out (round2_out)
+        .state_out (round_state[2])
     );
 
     aes_round r3 (
-        .state_in  (stage2),
+        .state_in  (round_state[2]),
         .round_key (round_key[3]),
-        .state_out (round3_out)
+        .state_out (round_state[3])
     );
 
     aes_round r4 (
-        .state_in  (stage3),
+        .state_in  (round_state[3]),
         .round_key (round_key[4]),
-        .state_out (round4_out)
+        .state_out (round_state[4])
     );
 
     aes_round r5 (
-        .state_in  (stage4),
+        .state_in  (round_state[4]),
         .round_key (round_key[5]),
-        .state_out (round5_out)
+        .state_out (round_state[5])
     );
 
     aes_round r6 (
-        .state_in  (stage5),
+        .state_in  (round_state[5]),
         .round_key (round_key[6]),
-        .state_out (round6_out)
+        .state_out (round_state[6])
     );
 
     aes_round r7 (
-        .state_in  (stage6),
+        .state_in  (round_state[6]),
         .round_key (round_key[7]),
-        .state_out (round7_out)
+        .state_out (round_state[7])
     );
 
     aes_round r8 (
-        .state_in  (stage7),
+        .state_in  (round_state[7]),
         .round_key (round_key[8]),
-        .state_out (round8_out)
+        .state_out (round_state[8])
     );
 
     aes_round r9 (
-        .state_in  (stage8),
+        .state_in  (round_state[8]),
         .round_key (round_key[9]),
-        .state_out (round9_out)
+        .state_out (round_state[9])
     );
 
-    // =========================================================================
-    // Final Round (No MixColumns)
-    // =========================================================================
+    // -------------------------------------------------------------------------
+    // Final Round
+    // -------------------------------------------------------------------------
+
+    wire [127:0] final_state;
 
     aes_final_round r10 (
-        .state_in  (stage9),
+        .state_in  (round_state[9]),
         .round_key (round_key[10]),
-        .state_out (round10_out)
+        .state_out (final_state)
     );
 
-    // =========================================================================
-    // Pipeline Registers
-    // =========================================================================
+    // -------------------------------------------------------------------------
+    // ONLY output register retained
+    // -------------------------------------------------------------------------
 
-    always @(posedge clk) begin
-
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-
-            stage0  <= 128'b0;
-            stage1  <= 128'b0;
-            stage2  <= 128'b0;
-            stage3  <= 128'b0;
-            stage4  <= 128'b0;
-            stage5  <= 128'b0;
-            stage6  <= 128'b0;
-            stage7  <= 128'b0;
-            stage8  <= 128'b0;
-            stage9  <= 128'b0;
-            stage10 <= 128'b0;
-
+            ciphertext <= 128'd0;
+            valid_out  <= 1'b0;
         end
         else begin
-
-            // Load new plaintext every cycle
-            stage0 <= init_state;
-
-            // Shift pipeline forward
-            stage1  <= round1_out;
-            stage2  <= round2_out;
-            stage3  <= round3_out;
-            stage4  <= round4_out;
-            stage5  <= round5_out;
-            stage6  <= round6_out;
-            stage7  <= round7_out;
-            stage8  <= round8_out;
-            stage9  <= round9_out;
-            stage10 <= round10_out;
-
+            ciphertext <= final_state;
+            valid_out  <= valid_in;
         end
     end
-
-    // =========================================================================
-    // Valid / Done Pipeline
-    // =========================================================================
-
-    reg [10:0] valid_pipe;
-
-    always @(posedge clk) begin
-
-        if (!rst_n) begin
-            valid_pipe <= 11'b0;
-        end
-        else begin
-
-            valid_pipe[0]  <= start;
-
-            valid_pipe[1]  <= valid_pipe[0];
-            valid_pipe[2]  <= valid_pipe[1];
-            valid_pipe[3]  <= valid_pipe[2];
-            valid_pipe[4]  <= valid_pipe[3];
-            valid_pipe[5]  <= valid_pipe[4];
-            valid_pipe[6]  <= valid_pipe[5];
-            valid_pipe[7]  <= valid_pipe[6];
-            valid_pipe[8]  <= valid_pipe[7];
-            valid_pipe[9]  <= valid_pipe[8];
-            valid_pipe[10] <= valid_pipe[9];
-
-        end
-    end
-
-    // =========================================================================
-    // Outputs
-    // =========================================================================
-
-    assign done       = valid_pipe[10];
-    assign cipher_out = stage10;
 
 endmodule
 
