@@ -56,6 +56,7 @@ module aes_pipeline_top (
     reg [127:0] state_reg;
     reg [2:0]   phase;
     reg         busy;
+    reg [127:0] round9_reg;
 
     // ---------------------------------------------------------------------
     // Round outputs
@@ -94,7 +95,7 @@ module aes_pipeline_top (
     // ---------------------------------------------------------------------
 
     aes_final_round rf (
-        .state_in  (round1_out),
+        .state_in  (round9_reg),
         .round_key (round_key[10]),
         .state_out (final_out)
     );
@@ -153,7 +154,7 @@ module aes_pipeline_top (
             
                 else if (phase == 4) begin
             
-                    state_reg <= round1_out;
+                    round9_reg <= round1_out;
                     phase     <= phase + 1'b1;
             
                 end
