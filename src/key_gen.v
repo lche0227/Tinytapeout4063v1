@@ -26,10 +26,10 @@
 
 // =============================================================================
 // key_gen.v  –  AES-128 Key Expansion (KeySchedule) (combinational)
-// Verilator-clean version:
+
 //   - Packed W_flat vector (no unpacked wire arrays) → no UNOPTFLAT on W
 //   - rot_w/sub_w UNOPTFLAT suppressed with lint pragmas (false positive:
-//     Verilator traces through sbox internals creating a phantom cycle;
+
 //     the logic is provably acyclic – each sub_w[s] depends only on
 //     W_flat bits that are driven by earlier words with lower indices)
 //   - All generate if/else blocks have explicit labels → no GENUNNAMED
@@ -92,7 +92,7 @@ module key_gen (
     // -------------------------------------------------------------------------
     // SubWord(RotWord(W[4s+3])) for s = 0..9
     //
-    // Verilator raises UNOPTFLAT on rot_w/sub_w because it traces dependency
+
     // paths through sbox combinational logic back into W_flat and mistakes it
     // for a cycle.  The circuit is genuinely acyclic: sub_w[s] depends on
     // W_flat[(4s+3)*32 +: 32] which is always a lower-index word than the
@@ -100,10 +100,8 @@ module key_gen (
     // suppresses only this false-positive; synthesis is unaffected.
     // -------------------------------------------------------------------------
 
-    // /* verilator lint_off UNOPTFLAT */
     wire [31:0] rot_w [0:9];
     wire [31:0] sub_w [0:9];
-    // /* verilator lint_on UNOPTFLAT */
 
     genvar s;
     generate
