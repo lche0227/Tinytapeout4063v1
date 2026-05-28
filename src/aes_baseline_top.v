@@ -3,32 +3,38 @@
 // =============================================================================
 // Iterative one-round-per-cycle architecture.
 //
-// Interface (start/busy/done style – design choice B in the project spec):
+// Interface (start/done style):
 //   clk        – clock
 //   rst_n      – active-low synchronous reset
 //   start      – assert for one cycle to begin encryption
 //   key_in     – 128-bit cipher key
 //   plain_in   – 128-bit plaintext
-//   busy       – high while encryption is in progress
 //   done       – pulses high for one cycle when ciphertext is ready
-//   cipher_out – 128-bit ciphertext output (valid when done is high and
+//   cipher_out – 128-bit ciphertext output (valid when done pulses and
 //                remains stable until the next start)
 //
-// Operation
-//   1. Assert start=1 with valid key_in and plain_in.
-//   2. The core loads the key, pre-computes all round keys, performs the
-//      initial AddRoundKey, then steps through 9 main rounds (each one clock
-//      cycle) and the final round 10 (no MixColumns).
-//   3. busy is high throughout; done pulses when cipher_out is valid.
-//   4. Total latency: 12 clock cycles after start (1 load + 1 initial ARK +
-//      9 main rounds + 1 final round).
+// Notes on operation and key schedule
+//   - On `start`, the core loads `plain_in` and forwards `key_in` to the
+//     sequential key expansion in `key_gen`. `key_gen` provides round keys
+//     sequentially (one per cycle); it does not pre-compute all round keys
+//     in a single cycle.
+//   - Cycle sequence:
+//       1) Load plaintext and apply RoundKey[0] (initial AddRoundKey).
+//       2) Execute rounds 1–9: SubBytes -> ShiftRows -> MixColumns -> AddRoundKey
+//       3) Final round 10: SubBytes -> ShiftRows -> AddRoundKey (no MixColumns)
+//   - The datapath in this top-level uses single combinational instances of
+//     `sub_byte`, `shift_row`, and `mix_col` driven from the registered state
+//     each cycle (i.e., the modules are reused every round).
+//   - The implemented latency from the cycle where `start` is sampled to the
+//     `done` pulse is 12 clock cycles (1 load + 1 initial ARK + 9 main rounds
+//     + 1 final round), which matches the FSM below.
 //
 // Hierarchy
-//   main          (this file)
-//   ├── key_gen   (key_gen.v)
-//   ├── sub_byte  (sub_byte.v)  x2 instances (main + final round)
-//   ├── shift_row (shift_row.v) x2 instances
-//   └── mix_col   (mix_col.v)
+//   aes_baseline_top
+//   ├── key_gen   (key_gen.v)      — sequential key expansion
+//   ├── sub_byte  (sub_byte.v)     — single combinational S-box layer
+//   ├── shift_row (shift_row.v)    — single combinational ShiftRows
+//   └── mix_col   (mix_col.v)      — single combinational MixColumns
 // =============================================================================
 
 `default_nettype none

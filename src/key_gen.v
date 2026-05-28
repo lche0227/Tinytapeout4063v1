@@ -1,3 +1,31 @@
+// -----------------------------------------------------------------------------
+// key_gen.v  – Sequential AES-128 key schedule (top-level for key expansion)
+// -----------------------------------------------------------------------------
+// Behavior
+//  - Implements AES-128 key expansion sequentially: on `start` the provided
+//    128-bit `key_in` is loaded as RoundKey[0], and subsequent round keys are
+//    generated one-per-cycle on each rising clock until all 10 round keys are
+//    produced. This module does not compute all round keys combinationally in
+//    a single cycle — it advances the key register each cycle.
+//  - `round_key` presents the current round key. After `start`, the first
+//    cycle presents RoundKey[0] (the original key), and successive cycles
+//    present RoundKey[1], RoundKey[2], ..., RoundKey[10].
+//
+// Interface
+//   clk       - clock
+//   rst_n     - active-low synchronous reset
+//   start     - assert for one cycle to begin expansion and load `key_in`
+//   key_in    - 128-bit cipher key (used as RoundKey[0])
+//   round_key - 128-bit output presenting the current round key
+//
+// Notes
+//  - The module uses a small number of S-box instances (`sbox`) to implement
+//    `SubWord` (4 bytes) used in the key schedule; these are instantiated as
+//    separate `sbox` instances (one per byte of the `rot_word`).
+//  - A `valid` register is used internally to drive sequential generation of
+//    next keys until 10 rounds are produced.
+// -----------------------------------------------------------------------------
+
 `default_nettype none
 
 module key_gen (
