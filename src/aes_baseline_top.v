@@ -1,5 +1,5 @@
 // =============================================================================
-// main.v  –  AES-128 Encryption Core (top level)
+// aes_baseline_top.v  –  AES-128 Encryption Core (top level)
 // =============================================================================
 // Iterative one-round-per-cycle architecture.
 //
@@ -33,7 +33,7 @@
 
 `default_nettype none
 
-module aes_pipeline_top (
+module aes_baseline_top (
     input  wire         clk,
     input  wire         rst_n,      // active-low synchronous reset
     input  wire         start,
@@ -55,31 +55,24 @@ module aes_pipeline_top (
 
     reg [3:0]  state;
     reg [3:0]  round_cnt;       // tracks current round (1-10)
-    // reg busy;
+
     // -------------------------------------------------------------------------
     // Registered copies of inputs – declared here so key_gen can use key_reg
     // -------------------------------------------------------------------------
-    // reg [127:0] key_reg;
     reg [127:0] state_reg;      // current AES state (128-bit)
 
     // -------------------------------------------------------------------------
-    // Key expansion – change to sequential, always available
+    // Key expansion – change to sequential
     // -------------------------------------------------------------------------
     wire [127:0] current_round_key;
-    // wire [3:0]   current_round;
-    // wire         key_valid;
 
     key_gen u_key_gen (
 
         .clk       (clk),
         .rst_n     (rst_n),
         .start     (start),
-
         .key_in    (key_in),
-
         .round_key (current_round_key)
-        // .round     (current_round),
-        // .valid     (key_valid)
     );
 
     // -------------------------------------------------------------------------
@@ -100,10 +93,8 @@ module aes_pipeline_top (
         if (!rst_n) begin
             state     <= S_IDLE;
             round_cnt <= 4'd0;
-            // busy      <= 1'b0;
             done      <= 1'b0;
             cipher_out<= 128'b0;
-            // key_reg   <= 128'b0;
             state_reg <= 128'b0;
         end else begin
             done <= 1'b0;   // default: not done
@@ -111,12 +102,9 @@ module aes_pipeline_top (
             case (state)
                 // -------------------------------------------------------------
                 S_IDLE: begin
-                    // busy <= 1'b0;
                     if (start) begin
-                        // key_reg   <= key_in;
                         state_reg <= plain_in;
                         state     <= S_INIT_ARK;
-                        // busy      <= 1'b1;
                         round_cnt <= 4'd1;
                     end
                 end
@@ -136,7 +124,6 @@ module aes_pipeline_top (
                 // and advance the round counter.
                 // -------------------------------------------------------------
                 S_ROUND_MAIN: begin
-                    // mc_out = MixColumns(ShiftRows(SubBytes(state_reg)))
                     state_reg <= mc_out ^ current_round_key;
 
                     if (round_cnt == 4'd9) begin
@@ -162,7 +149,6 @@ module aes_pipeline_top (
                 // -------------------------------------------------------------
                 S_DONE: begin
                     done  <= 1'b1;
-                    // busy  <= 1'b0;
                     state <= S_IDLE;
                 end
 

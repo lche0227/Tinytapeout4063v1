@@ -1,10 +1,10 @@
 /*
- * Copyright (c) 2024 lche0227
+ * Copyright (c) 2024 tche0123
  * SPDX-License-Identifier: Apache-2.0
  */
 `default_nettype none
 
-module tt_um_lche0227_aes_pipeline_top (
+module tt_um_tche0123_aes_baseline_top (
     input  wire [7:0] ui_in,
     output wire [7:0] uo_out,
     input  wire [7:0] uio_in,
@@ -88,7 +88,7 @@ module tt_um_lche0227_aes_pipeline_top (
     wire        done;
     wire [127:0] cipher_out;
 
-    aes_pipeline_top u_aes (
+    aes_baseline_top u_aes (
         .clk       (clk),
         .rst_n     (rst_n),
         .start     (start_in),

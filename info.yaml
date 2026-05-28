@@ -1,24 +1,24 @@
 # Tiny Tapeout project information
 project:
-  title:        "AES-128 Pipeline Encryption Core"      # Project title
-  author:       "lche0227"      # Your name
+  title:        "AES-128 Iterative Encryption Core"      # Project title
+  author:       "tche0123"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A fully pipelined AES-128 encryption core"      # One line description of what your project does
+  description:  "An iterative one-round per cycle AES-128 encryption core"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     50000000       # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "4x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  tiles: "3x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_lche0227_aes_pipeline_top"
+  top_module:  "tt_um_tche0123_aes_baseline_top"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "tt_um_lche0227_aes_pipeline_top.v"
-    - "aes_pipeline_top.v"
+    - "tt_um_tche0123_aes_baseline_top.v"
+    - "aes_baseline_top.v"
     - "key_gen.v"
     - "sub_byte.v"
     - "shift_row.v"

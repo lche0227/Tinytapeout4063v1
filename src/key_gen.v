@@ -5,12 +5,8 @@ module key_gen (
     input  wire         clk,
     input  wire         rst_n,
     input  wire         start,
-
     input  wire [127:0] key_in,
-
     output reg  [127:0] round_key
-    // output reg  [3:0]   round,
-    // output reg          valid
 );
 
     // ---------------------------------------------------------------------
@@ -151,7 +147,6 @@ module key_gen (
 
                 round_key <= key_in;
                 round     <= 4'd0;
-
                 valid <= 1'b1;
 
             end
@@ -166,7 +161,6 @@ module key_gen (
 
                 round_key <= next_key;
                 round     <= round + 1'b1;
-
                 valid <= 1'b1;
 
             end
