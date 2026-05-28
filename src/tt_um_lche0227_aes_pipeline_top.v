@@ -94,7 +94,6 @@ module tt_um_lche0227_aes_pipeline_top (
         .start     (start_in),
         .key_in    (key_in),
         .plain_in  (plain_in),
-        .busy      (),
         .done      (done),
         .cipher_out(cipher_out)
     );
