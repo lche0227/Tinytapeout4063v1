@@ -59,15 +59,15 @@ module aes_pipeline_top (
     // -------------------------------------------------------------------------
     // Registered copies of inputs – declared here so key_gen can use key_reg
     // -------------------------------------------------------------------------
-    reg [127:0] key_reg;
+    // reg [127:0] key_reg;
     reg [127:0] state_reg;      // current AES state (128-bit)
 
     // -------------------------------------------------------------------------
     // Key expansion – change to sequential, always available
     // -------------------------------------------------------------------------
     wire [127:0] current_round_key;
-    wire [3:0]   current_round;
-    wire         key_valid;
+    // wire [3:0]   current_round;
+    // wire         key_valid;
 
     key_gen u_key_gen (
 
@@ -78,8 +78,8 @@ module aes_pipeline_top (
         .key_in    (key_in),
 
         .round_key (current_round_key),
-        .round     (current_round),
-        .valid     (key_valid)
+        // .round     (current_round),
+        // .valid     (key_valid)
     );
 
     // -------------------------------------------------------------------------
@@ -103,7 +103,7 @@ module aes_pipeline_top (
             // busy      <= 1'b0;
             done      <= 1'b0;
             cipher_out<= 128'b0;
-            key_reg   <= 128'b0;
+            // key_reg   <= 128'b0;
             state_reg <= 128'b0;
         end else begin
             done <= 1'b0;   // default: not done
@@ -113,7 +113,7 @@ module aes_pipeline_top (
                 S_IDLE: begin
                     // busy <= 1'b0;
                     if (start) begin
-                        key_reg   <= key_in;
+                        // key_reg   <= key_in;
                         state_reg <= plain_in;
                         state     <= S_INIT_ARK;
                         // busy      <= 1'b1;

@@ -9,15 +9,17 @@ module key_gen (
     input  wire [127:0] key_in,
 
     output reg  [127:0] round_key,
-    output reg  [3:0]   round,
-    output reg          valid
+    // output reg  [3:0]   round,
+    // output reg          valid
 );
 
     // ---------------------------------------------------------------------
-    // Current key register
+    // Current key register and round counter and valid
     // ---------------------------------------------------------------------
 
     reg [127:0] current_key;
+    reg  [3:0]   round,
+    reg valid;
 
     // ---------------------------------------------------------------------
     // Split current key into words
