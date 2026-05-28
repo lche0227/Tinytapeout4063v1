@@ -32,22 +32,21 @@ module aes_pipeline_top (
     // Round keys
     // ---------------------------------------------------------------------
 
-    wire [1407:0] all_round_keys;
-    wire [127:0] round_key [0:10];
-
+    wire [127:0] current_round_key;
+    wire [3:0]   current_round;
+    wire         key_valid;
+    
     key_gen u_key_gen (
-        .key_in(key_in),
-        .round_key_out(all_round_keys)
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .start     (valid_in),
+    
+        .key_in    (key_in),
+    
+        .round_key (current_round_key),
+        .round     (current_round),
+        .valid     (key_valid)
     );
-
-    genvar rk;
-
-    generate
-        for (rk = 0; rk <= 10; rk = rk + 1) begin : RK_UNPACK
-            assign round_key[rk] =
-                all_round_keys[(10-rk)*128 +: 128];
-        end
-    endgenerate
 
     // ---------------------------------------------------------------------
     // Internal state
@@ -80,13 +79,13 @@ module aes_pipeline_top (
     
     aes_round r1 (
         .state_in  (state_reg),
-        .round_key (round_key[rk1_idx]),
+        .round_key (current_round_key),
         .state_out (round1_out)
     );
 
     aes_round r2 (
         .state_in  (round1_out),
-        .round_key (round_key[rk2_idx]),
+        .round_key (current_round_key),
         .state_out (round2_out)
     );
 
@@ -96,7 +95,7 @@ module aes_pipeline_top (
 
     aes_final_round rf (
         .state_in  (round9_reg),
-        .round_key (round_key[10]),
+        .round_key (current_round_key),
         .state_out (final_out)
     );
 
@@ -125,7 +124,7 @@ module aes_pipeline_top (
 
             if (valid_in && !busy) begin
 
-                state_reg <= plaintext ^ round_key[0];
+                state_reg <= plaintext ^ current_round_key;
                 phase     <= 3'd0;
                 busy      <= 1'b1;
 
