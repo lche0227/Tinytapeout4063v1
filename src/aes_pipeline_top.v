@@ -72,11 +72,11 @@ module aes_pipeline_top (
     wire [3:0] rk1_idx;
     wire [3:0] rk2_idx;
     
-    assign rk1_idx = (phase == 4) ? 4'd9 :
-                     ((phase << 1) + 1);
+    assign rk1_idx = (phase == 3'd4) ? 4'd9 :
+                     ({1'b0, phase} << 1) + 4'd1;
     
-    assign rk2_idx = (phase >= 4) ? 4'd9 :
-                     ((phase << 1) + 2);
+    assign rk2_idx = (phase >= 3'd4) ? 4'd9 :
+                     ({1'b0, phase} << 1) + 4'd2;
     
     aes_round r1 (
         .state_in  (state_reg),
@@ -104,7 +104,7 @@ module aes_pipeline_top (
     // Main controller
     // ---------------------------------------------------------------------
 
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge clk) begin
 
         if (!rst_n) begin
 
@@ -170,6 +170,7 @@ module aes_pipeline_top (
                     ciphertext <= final_out;
                     valid_out  <= 1'b1;
                     busy       <= 1'b0;
+                    phase <= 3'd0;
 
                 end
             end
