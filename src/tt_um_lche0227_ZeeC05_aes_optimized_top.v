@@ -90,7 +90,7 @@ module tt_um_lche0227_ZeeC05_aes_optimized_top (
     wire        done;
     wire [127:0] cipher_out;
 
-    aes_optimzed_top u_aes (
+    aes_optimized_top u_aes (
         .clk        (clk),
         .rst_n      (rst_n),
         .start      (start_in),
