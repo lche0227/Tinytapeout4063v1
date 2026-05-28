@@ -1,5 +1,5 @@
 // =============================================================================
-// aes_pipeline_top.v
+// aes_optimized_top.v
 // Iterative AES-128 encryption core
 //
 // Architecture:
@@ -13,7 +13,7 @@
 
 `default_nettype none
 
-module aes_pipeline_top (
+module aes_optimized_top (
     input  wire         clk,
     input  wire         rst_n,
     input  wire         start,

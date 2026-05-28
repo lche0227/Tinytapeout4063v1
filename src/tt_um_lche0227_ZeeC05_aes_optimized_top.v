@@ -6,7 +6,7 @@
 //`timescale 1ns/1ps //not included in tinytapeout !!
 `default_nettype none
 
-module tt_um_lche0227_aes_pipeline_top (
+module tt_um_lche0227_ZeeC05_aes_optimized_top (
     input  wire [7:0] ui_in,
     output wire [7:0] uo_out,
     input  wire [7:0] uio_in,
@@ -90,7 +90,7 @@ module tt_um_lche0227_aes_pipeline_top (
     wire        done;
     wire [127:0] cipher_out;
 
-    aes_pipeline_top u_aes (
+    aes_optimzed_top u_aes (
         .clk        (clk),
         .rst_n      (rst_n),
         .start      (start_in),

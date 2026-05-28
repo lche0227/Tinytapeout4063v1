@@ -185,7 +185,7 @@ VECTORS = [
 
 @cocotb.test()
 async def test_aes128_all_vectors(dut):
-    """Run all AES-128 known-answer test vectors through the pipeline."""
+    """Run all AES-128 known-answer test vectors."""
 
     # Start clock — 50 MHz (20 ns period)
     cocotb.start_soon(Clock(dut.clk, 20, units="ns").start())
@@ -199,7 +199,7 @@ async def test_aes128_all_vectors(dut):
     await RisingEdge(dut.clk)
 
     dut._log.info("=" * 60)
-    dut._log.info("AES-128 Pipeline KAT — all vectors")
+    dut._log.info("AES-128 Optimized KAT — all vectors")
     dut._log.info("=" * 60)
 
     passed = 0

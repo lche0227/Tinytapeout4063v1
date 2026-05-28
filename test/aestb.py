@@ -183,7 +183,7 @@
 
 # @cocotb.test()
 # async def test_aes128_all_vectors(dut):
-#     """Run all AES-128 known-answer test vectors through the pipeline."""
+#     """Run all AES-128 known-answer test vectors."""
 
 #     # Start clock — 50 MHz (20 ns period)
 #     cocotb.start_soon(Clock(dut.clk, 20, units="ns").start())
@@ -197,7 +197,7 @@
 #     await RisingEdge(dut.clk)
 
 #     dut._log.info("=" * 60)
-#     dut._log.info("AES-128 Pipeline KAT — all vectors")
+#     dut._log.info("AES-128 Optimized KAT — all vectors")
 #     dut._log.info("=" * 60)
 
 #     passed = 0
@@ -273,7 +273,7 @@
 # 19     Testbench sees keys_ready, loads plaintext bytes
 # 19-34  Load plaintext bytes 0-15
 # 35     Pulse start=1
-# 36-45  Pipeline processes 10 rounds
+# 36-45  Processes 10 rounds
 # 46     done asserted (uio_out[0])
 # 46-61  Read ciphertext bytes 0-15
 
@@ -463,7 +463,7 @@ VECTORS = [
 
 @cocotb.test()
 async def test_aes128_all_vectors(dut):
-    """AES-128 pipeline KAT — all vectors, clocked key_gen."""
+    """AES-128 optimized KAT — all vectors, clocked key_gen."""
 
     cocotb.start_soon(Clock(dut.clk, 20, units="ns").start())
 
@@ -475,7 +475,7 @@ async def test_aes128_all_vectors(dut):
     await RisingEdge(dut.clk)
 
     dut._log.info("=" * 60)
-    dut._log.info("AES-128 Pipeline KAT — clocked key_gen")
+    dut._log.info("AES-128 Optimized KAT — clocked key_gen")
     dut._log.info("=" * 60)
 
     passed = 0
