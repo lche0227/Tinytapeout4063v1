@@ -63,23 +63,24 @@ module aes_pipeline_top (
     reg [127:0] state_reg;      // current AES state (128-bit)
 
     // -------------------------------------------------------------------------
-    // Key expansion – combinational, always available
+    // Key expansion – change to sequential, always available
     // -------------------------------------------------------------------------
-    wire [1407:0] all_round_keys;
-    wire [127:0]  round_key [0:10];
+    wire [127:0] current_round_key;
+    wire [3:0]   current_round;
+    wire         key_valid;
 
     key_gen u_key_gen (
-        .key_in        (key_reg),
-        .round_key_out (all_round_keys)
-    );
 
-    genvar rk;
-    generate
-        for (rk = 0; rk <= 10; rk = rk + 1) begin : RK_UNPACK
-            // round_key_out[1407:1280]=RK[0], [1279:1152]=RK[1], ...
-            assign round_key[rk] = all_round_keys[(10-rk)*128 +: 128];
-        end
-    endgenerate
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .start     (start),
+
+        .key_in    (key_in),
+
+        .round_key (current_round_key),
+        .round     (current_round),
+        .valid     (key_valid)
+    );
 
     // -------------------------------------------------------------------------
     // Datapath wires
@@ -124,7 +125,7 @@ module aes_pipeline_top (
                 // Initial AddRoundKey: state = plaintext XOR RoundKey[0]
                 // -------------------------------------------------------------
                 S_INIT_ARK: begin
-                    state_reg <= state_reg ^ round_key[0];
+                    state_reg <= state_reg ^ current_round_key;
                     state     <= S_ROUND_MAIN;
                 end
 
@@ -136,7 +137,7 @@ module aes_pipeline_top (
                 // -------------------------------------------------------------
                 S_ROUND_MAIN: begin
                     // mc_out = MixColumns(ShiftRows(SubBytes(state_reg)))
-                    state_reg <= mc_out ^ round_key[round_cnt];
+                    state_reg <= mc_out ^ current_round_key;
 
                     if (round_cnt == 4'd9) begin
                         // Next iteration is the final round
@@ -153,8 +154,8 @@ module aes_pipeline_top (
                 // sr_out = ShiftRows(SubBytes(state_reg))
                 // -------------------------------------------------------------
                 S_ROUND_FINAL: begin
-                    state_reg  <= sr_out ^ round_key[10];
-                    cipher_out <= sr_out ^ round_key[10];
+                    state_reg  <= sr_out ^ current_round_key;
+                    cipher_out <= sr_out ^ current_round_key;
                     state      <= S_DONE;
                 end
 
