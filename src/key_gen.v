@@ -8,7 +8,7 @@ module key_gen (
 
     input  wire [127:0] key_in,
 
-    output reg  [127:0] round_key,
+    output reg  [127:0] round_key
     // output reg  [3:0]   round,
     // output reg          valid
 );
@@ -18,7 +18,7 @@ module key_gen (
     // ---------------------------------------------------------------------
 
     reg [127:0] current_key;
-    reg  [3:0]   round,
+    reg  [3:0]   round;
     reg valid;
 
     // ---------------------------------------------------------------------

@@ -77,7 +77,7 @@ module aes_pipeline_top (
 
         .key_in    (key_in),
 
-        .round_key (current_round_key),
+        .round_key (current_round_key)
         // .round     (current_round),
         // .valid     (key_valid)
     );
