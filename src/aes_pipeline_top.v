@@ -55,7 +55,7 @@ module aes_pipeline_top (
 
     reg [3:0]  state;
     reg [3:0]  round_cnt;       // tracks current round (1-10)
-    reg busy;
+    // reg busy;
     // -------------------------------------------------------------------------
     // Registered copies of inputs – declared here so key_gen can use key_reg
     // -------------------------------------------------------------------------
@@ -99,7 +99,7 @@ module aes_pipeline_top (
         if (!rst_n) begin
             state     <= S_IDLE;
             round_cnt <= 4'd0;
-            busy      <= 1'b0;
+            // busy      <= 1'b0;
             done      <= 1'b0;
             cipher_out<= 128'b0;
             key_reg   <= 128'b0;
@@ -115,7 +115,7 @@ module aes_pipeline_top (
                         key_reg   <= key_in;
                         state_reg <= plain_in;
                         state     <= S_INIT_ARK;
-                        busy      <= 1'b1;
+                        // busy      <= 1'b1;
                         round_cnt <= 4'd1;
                     end
                 end
@@ -161,7 +161,7 @@ module aes_pipeline_top (
                 // -------------------------------------------------------------
                 S_DONE: begin
                     done  <= 1'b1;
-                    busy  <= 1'b0;
+                    // busy  <= 1'b0;
                     state <= S_IDLE;
                 end
 
