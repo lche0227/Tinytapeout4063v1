@@ -8,8 +8,8 @@ TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 
 #  Only this block changes — list all your source files here
-PROJECT_SOURCES = tt_um_lche0227_aes_pipeline_top.v \
-                  aes_pipeline_top.v \
+PROJECT_SOURCES = tt_um_lche0227_ZeeC05_aes_optimized_top.v \
+                  aes_optimized_top.v \
                   key_gen.v \
                   sub_byte.v \
                   shift_row.v \
