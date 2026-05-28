@@ -110,7 +110,7 @@ module aes_pipeline_top (
             case (state)
                 // -------------------------------------------------------------
                 S_IDLE: begin
-                    busy <= 1'b0;
+                    // busy <= 1'b0;
                     if (start) begin
                         key_reg   <= key_in;
                         state_reg <= plain_in;
