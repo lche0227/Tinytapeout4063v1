@@ -46,3 +46,5 @@ jobs:
       id-token: write # to verify the deployment originates from an appropriate source
     steps:
       - uses: TinyTapeout/tt-gds-action/viewer@ttihp26a
+        with:
+          github-pages-artifact-name: github-pages-${{ github.run_id }}

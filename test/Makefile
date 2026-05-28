@@ -6,7 +6,15 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v
+
+#  Only this block changes — list all your source files here
+PROJECT_SOURCES = tt_um_lche0227_ZeeC05_aes_optimized_top.v \
+                  aes_optimized_top.v \
+                  key_gen.v \
+                  sub_byte.v \
+                  shift_row.v \
+				  sbox.v \
+                  mix_col.v
 
 ifneq ($(GATES),yes)
 
