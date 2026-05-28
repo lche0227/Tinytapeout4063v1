@@ -39,7 +39,6 @@ module aes_pipeline_top (
     input  wire         start,
     input  wire [127:0] key_in,
     input  wire [127:0] plain_in,
-    output reg          busy,
     output reg          done,
     output reg  [127:0] cipher_out
 );
@@ -56,7 +55,7 @@ module aes_pipeline_top (
 
     reg [3:0]  state;
     reg [3:0]  round_cnt;       // tracks current round (1-10)
-
+    reg busy;
     // -------------------------------------------------------------------------
     // Registered copies of inputs – declared here so key_gen can use key_reg
     // -------------------------------------------------------------------------
