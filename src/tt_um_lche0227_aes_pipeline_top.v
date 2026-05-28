@@ -89,13 +89,14 @@ module tt_um_lche0227_aes_pipeline_top (
     wire [127:0] cipher_out;
 
     aes_pipeline_top u_aes (
-        .clk        (clk),
-        .rst_n      (rst_n),
-        .valid_in   (start_in),
-        .plaintext  (plain_in),
-        .key_in     (key_in),
-        .ciphertext (cipher_out),
-        .valid_out  (done)
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .start     (start_in),
+        .key_in    (key_in),
+        .plain_in  (plain_in),
+        .busy      (),
+        .done      (done),
+        .cipher_out(cipher_out)
     );
 
     // =========================================================================
